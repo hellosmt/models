@@ -36,7 +36,7 @@ class _NoopVariableScope(object):
   def __exit__(self, exc_type, exc_value, traceback):
     return False
 
-
+# 第一阶段的box预测器，只关心是前景还是背景
 class ConvolutionalBoxPredictor(box_predictor.BoxPredictor):
   """Convolutional Box Predictor.
 

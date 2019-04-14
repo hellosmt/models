@@ -59,6 +59,7 @@ import abc
 from object_detection.core import standard_fields as fields
 
 
+#是meta_architectures/目录下各种检测模型元结构的基类
 class DetectionModel(object):
   """Abstract base class for detection models."""
   __metaclass__ = abc.ABCMeta

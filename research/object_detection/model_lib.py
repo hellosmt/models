@@ -37,6 +37,7 @@ from object_detection.utils import shape_utils
 from object_detection.utils import variables_helper
 from object_detection.utils import visualization_utils as vis_utils
 
+# 一些包的调用 为了少写几个包名
 # A map of names to methods that help build the model.
 MODEL_BUILD_UTIL_MAP = {
     'get_configs_from_pipeline_file':
@@ -618,6 +619,9 @@ def create_estimator_and_inputs(run_config,
   if train_steps is None and train_config.num_steps != 0:
     train_steps = train_config.num_steps
 
+  # functools.partial 通过包装手法，允许我们 "重新定义" 函数签名
+  #用一些默认参数包装一个可调用对象,返回结果是可调用对象，并且可以像原始对象一样对待
+  #这里返回一个函数，builders/model_builder.py
   detection_model_fn = functools.partial(
       detection_model_fn_base, model_config=model_config)
 
@@ -661,6 +665,8 @@ def create_estimator_and_inputs(run_config,
         eval_on_tpu=False,  # Eval runs on CPU, so disable eval on TPU
         params=params if params else {})
   else:
+    # Estimator（评估器）类代表一个模型，以及这些模型被训练和评估的方式，
+    # 这里没有使用Pre-made estimators（是Estimator的子类）而是采用了自定义的 Custom Estimators（实例化），不同点在于是否需要定义自己的model_fn
     estimator = tf.estimator.Estimator(model_fn=model_fn, config=run_config)
 
   # Write the as-run pipeline config to disk.

@@ -110,7 +110,7 @@ from object_detection.utils import shape_utils
 
 slim = tf.contrib.slim
 
-
+# 这个是用于FasterRCNN的特征提取器类，是个基类，它的子类在models/目录下，有基于mobilenet、resnet等等网络的
 class FasterRCNNFeatureExtractor(object):
   """Faster R-CNN Feature Extractor definition."""
 
@@ -143,6 +143,7 @@ class FasterRCNNFeatureExtractor(object):
     """Feature-extractor specific preprocessing (minus image resizing)."""
     pass
 
+  # 提取用于第二阶段分类的特征，我认为是从ROI提取出特征图？？？  
   def extract_proposal_features(self, preprocessed_inputs, scope):
     """Extracts first stage RPN features.
 
@@ -215,7 +216,7 @@ class FasterRCNNFeatureExtractor(object):
           variables_to_restore[var_name] = variable
     return variables_to_restore
 
-
+# FasterRCNN检测网络的元结构 注意函数名前不带'_'的是可供外界调用的借口，最重要的也就是这几个函数，带_的是只能自己调用的
 class FasterRCNNMetaArch(model.DetectionModel):
   """Faster R-CNN Meta-architecture definition."""
 
@@ -415,6 +416,9 @@ class FasterRCNNMetaArch(model.DetectionModel):
     self._first_stage_box_predictor_depth = first_stage_box_predictor_depth
     self._first_stage_minibatch_size = first_stage_minibatch_size
     self._first_stage_sampler = first_stage_sampler
+    # 第一阶段的box预测器，对3x3之后的rpn feature先进行两个并行的卷积，然后预测，函数返回一个ConvolutionalBoxPredictor类，
+    # 这个类在predictors/文件夹下，是core/box_predictor类的子类，
+    # 我没有弄明白的是论文中应该是这里经过了两个并行的1x1的卷积，再预测得分什么的，为什么num_layers_before_predictor=0？
     self._first_stage_box_predictor = (
         box_predictor_builder.build_convolutional_box_predictor(
             is_training=self._is_training,
@@ -498,6 +502,12 @@ class FasterRCNNMetaArch(model.DetectionModel):
     Returns:
       A positive integer.
     """
+    # 不太懂self._hard_example_miner，困难例也就是false positive，把其中错误分类的样本(hard negative)放入负样本集合再继续训练分类器。
+    # 对于目标检测中我们会事先标记处ground truth，然后再算法中会生成一系列proposals，proposals与ground truth的IOU超过一定阈值
+    #（通常0.5）的则认定为是正样本，低于一定阈值的则是负样本。然后扔进网络中训练。
+    # However，这也许会出现一个问题那就是正样本的数量远远小于负样本，这样训练出来的分类器的效果总是有限的，
+    # 会出现许多false positive。把其中得分较高的这些false positive当做所谓的Hard negative，
+    # 既然mining出了这些Hard negative，就把这些扔进网络再训练一次，从而加强分类器判别假阳性的能力。
     if self._is_training and not self._hard_example_miner:
       return self._second_stage_batch_size
     return self._first_stage_max_proposals
@@ -543,6 +553,7 @@ class FasterRCNNMetaArch(model.DetectionModel):
           parallel_iterations=self._parallel_iterations)
       resized_inputs = outputs[0]
       true_image_shapes = outputs[1]
+      # 预处理在特征提取器里进行的
       return (self._feature_extractor.preprocess(resized_inputs),
               true_image_shapes)
 
@@ -971,19 +982,21 @@ class FasterRCNNMetaArch(model.DetectionModel):
       image_shape: A 1-D tensor representing the input image shape.
     """
     image_shape = tf.shape(preprocessed_inputs)
-
+    # 用自己的特征提取器去提取要送到RPN的特征图——rpn_features_to_crop [batch, height, width, depth]
     rpn_features_to_crop, self.endpoints = (
         self._feature_extractor.extract_proposal_features(
             preprocessed_inputs,
             scope=self.first_stage_feature_extractor_scope))
 
     feature_map_shape = tf.shape(rpn_features_to_crop)
+    # 得到anchors
     anchors = box_list_ops.concatenate(
         self._first_stage_anchor_generator.generate([(feature_map_shape[1],
                                                       feature_map_shape[2])]))
     with slim.arg_scope(self._first_stage_box_predictor_arg_scope_fn()):
       kernel_size = self._first_stage_box_predictor_kernel_size
       reuse = tf.get_variable_scope().reuse
+      # 这里对输入进RPN的特征图进行卷积操作，结合图看感觉是3x3那里，也就是这一步之后，要再走两个并行的1x1卷积
       rpn_box_predictor_features = slim.conv2d(
           rpn_features_to_crop,
           self._first_stage_box_predictor_depth,
@@ -995,6 +1008,7 @@ class FasterRCNNMetaArch(model.DetectionModel):
     return (rpn_box_predictor_features, rpn_features_to_crop,
             anchors, image_shape)
 
+  # 产生proposals和类别得分（前景还是背景） 在这个里面计算了anchor
   def _predict_rpn_proposals(self, rpn_box_predictor_features):
     """Adds box predictors to RPN feature map to predict proposals.
 
@@ -1019,6 +1033,7 @@ class FasterRCNNMetaArch(model.DetectionModel):
         multiple feature maps.  We currently assume that a single feature map
         is generated for the RPN.
     """
+    # 得到特征图上每个点有多少个anchor，数量为scales*ratios
     num_anchors_per_location = (
         self._first_stage_anchor_generator.num_anchors_per_location())
     if len(num_anchors_per_location) != 1:
@@ -1028,6 +1043,9 @@ class FasterRCNNMetaArch(model.DetectionModel):
       box_predictions = self._first_stage_box_predictor(
           [rpn_box_predictor_features])
     else:
+      '''这里传的是[rpn_box_predictor_features]，一个列表，
+      num_anchors_per_location是一个元组，两者应该是一一对应的,
+      '''
       box_predictions = self._first_stage_box_predictor.predict(
           [rpn_box_predictor_features],
           num_anchors_per_location,

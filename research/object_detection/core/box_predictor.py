@@ -34,6 +34,7 @@ CLASS_PREDICTIONS_WITH_BACKGROUND = 'class_predictions_with_background'
 MASK_PREDICTIONS = 'mask_predictions'
 
 
+# 第一阶段的预测器基类 子类在predictors/目录下
 class BoxPredictor(object):
   """BoxPredictor."""
 
@@ -92,6 +93,9 @@ class BoxPredictor(object):
       ValueError: If length of `image_features` is not equal to length of
         `num_predictions_per_location`.
     """
+    '''这里传的是[rpn_box_predictor_features]，一个列表，
+      num_anchors_per_location是一个元组，代表前面列表里一个元素（也就是一个batch里的图片）的anchor数量是多少，两者应该是一一对应的,所以这里会比较它们的长度
+    '''
     if len(image_features) != len(num_predictions_per_location):
       raise ValueError('image_feature and num_predictions_per_location must '
                        'be of same length, found: {} vs {}'.

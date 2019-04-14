@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 """Binary to run train and evaluation on object detection model."""
-
+"""
+把老版本的train.py和eval.py合成了这一个，是整个API的入口
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,6 +26,8 @@ import tensorflow as tf
 
 from object_detection import model_hparams
 from object_detection import model_lib
+
+# tf中的定义命令行参数 string代表接收一个string类型的参数，前两个是必须的
 
 flags.DEFINE_string(
     'model_dir', None, 'Path to output model directory '
@@ -57,9 +61,9 @@ FLAGS = flags.FLAGS
 
 
 def main(unused_argv):
-  flags.mark_flag_as_required('model_dir')
+  flags.mark_flag_as_required('model_dir')#这里设置了这两个参数是必须指定的
   flags.mark_flag_as_required('pipeline_config_path')
-  config = tf.estimator.RunConfig(model_dir=FLAGS.model_dir)
+  config = tf.estimator.RunConfig(model_dir=FLAGS.model_dir) # 返回一个RunConfig类，该类指定Estimator运行的配置，model_dir是存放跑出来的模型参数、训练图等的文件路径
 
   train_and_eval_dict = model_lib.create_estimator_and_inputs(
       run_config=config,
@@ -76,6 +80,7 @@ def main(unused_argv):
   predict_input_fn = train_and_eval_dict['predict_input_fn']
   train_steps = train_and_eval_dict['train_steps']
 
+# 根据参数选择实际的训练/测试参数  没有看太明白
   if FLAGS.checkpoint_dir:
     if FLAGS.eval_training_data:
       name = 'training_data'
