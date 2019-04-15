@@ -620,8 +620,8 @@ def create_estimator_and_inputs(run_config,
     train_steps = train_config.num_steps
 
   # functools.partial 通过包装手法，允许我们 "重新定义" 函数签名
-  #用一些默认参数包装一个可调用对象,返回结果是可调用对象，并且可以像原始对象一样对待
-  #这里返回一个函数，builders/model_builder.py
+  # 用一些默认参数包装一个可调用对象,返回结果是可调用对象，并且可以像原始对象一样对待
+  # 这里返回一个函数，builders/model_builder.py 这个函数可以return一个DetectionModel类（具体就是某一个SSDMetaArch或者FasterRCNNMetaArch）
   detection_model_fn = functools.partial(
       detection_model_fn_base, model_config=model_config)
 
@@ -667,6 +667,7 @@ def create_estimator_and_inputs(run_config,
   else:
     # Estimator（评估器）类代表一个模型，以及这些模型被训练和评估的方式，
     # 这里没有使用Pre-made estimators（是Estimator的子类）而是采用了自定义的 Custom Estimators（实例化），不同点在于是否需要定义自己的model_fn
+    # 这里自定义了model_fn，
     estimator = tf.estimator.Estimator(model_fn=model_fn, config=run_config)
 
   # Write the as-run pipeline config to disk.
