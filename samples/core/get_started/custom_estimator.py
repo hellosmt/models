@@ -26,10 +26,10 @@ parser.add_argument('--batch_size', default=100, type=int, help='batch size')
 parser.add_argument('--train_steps', default=1000, type=int,
                     help='number of training steps')
 
-def my_model(features, labels, mode, params):
+def my_model(features, labels, mode, params): # 自己编写的模型函数 model_fn，features和labels来自输入函数，mode 参数表示调用程序是请求训练、预测还是评估
     """DNN with three hidden layers and learning_rate=0.1."""
     # Create three fully connected layers.
-    net = tf.feature_column.input_layer(features, params['feature_columns'])
+    net = tf.feature_column.input_layer(features, params['feature_columns']) # 将特征字典和 feature_columns 转换为模型的输入
     for units in params['hidden_units']:
         net = tf.layers.dense(net, units=units, activation=tf.nn.relu)
 
@@ -38,8 +38,8 @@ def my_model(features, labels, mode, params):
 
     # Compute predictions.
     predicted_classes = tf.argmax(logits, 1)
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
+    if mode == tf.estimator.ModeKeys.PREDICT: # 模型函数必须提供代码来处理全部三个 mode 值。对于每个 mode 值返回 tf.estimator.EstimatorSpec 的一个实例，其中包含调用程序所需的信息。
+        predictions = { # 预测字典中包含模型在预测模式下运行时返回的所有内容
             'class_ids': predicted_classes[:, tf.newaxis],
             'probabilities': tf.nn.softmax(logits),
             'logits': logits,
@@ -56,7 +56,7 @@ def my_model(features, labels, mode, params):
     metrics = {'accuracy': accuracy}
     tf.summary.scalar('accuracy', accuracy[1])
 
-    if mode == tf.estimator.ModeKeys.EVAL:
+    if mode == tf.estimator.ModeKeys.EVAL: # 针对评估返回的 EstimatorSpec 通常包含loss和一个或者多个指标
         return tf.estimator.EstimatorSpec(
             mode, loss=loss, eval_metric_ops=metrics)
 
@@ -65,7 +65,7 @@ def my_model(features, labels, mode, params):
 
     optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op) # 返回一个包含损失和训练操作的 EstimatorSpec
 
 
 def main(argv):
@@ -81,8 +81,8 @@ def main(argv):
 
     # Build 2 hidden layer DNN with 10, 10 units respectively.
     classifier = tf.estimator.Estimator(
-        model_fn=my_model,
-        params={
+        model_fn=my_model, # customer_estimator需要自己定义模型函数
+        params={  # 调用程序可以将 params 传递给 Estimator 的构造函数。传递给构造函数的所有 params 转而又传递给 model_fn
             'feature_columns': my_feature_columns,
             # Two hidden layers of 10 nodes each.
             'hidden_units': [10, 10],
@@ -91,7 +91,7 @@ def main(argv):
         })
 
     # Train the Model.
-    classifier.train(
+    classifier.train( # 调用train方法，Estimator 框架会调用模型函数并将 mode 设为 ModeKeys.TRAIN
         input_fn=lambda:iris_data.train_input_fn(train_x, train_y, args.batch_size),
         steps=args.train_steps)
 
