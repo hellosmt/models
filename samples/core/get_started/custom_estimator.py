@@ -73,6 +73,8 @@ def main(argv):
 
     # Fetch the data
     (train_x, train_y), (test_x, test_y) = iris_data.load_data()
+    #print("测试：",train_x)
+    #print("keys:", train_x.keys())
 
     # Feature columns describe how to use the input.
     my_feature_columns = []
@@ -83,7 +85,7 @@ def main(argv):
     classifier = tf.estimator.Estimator(
         model_fn=my_model, # customer_estimator需要自己定义模型函数
         params={  # 调用程序可以将 params 传递给 Estimator 的构造函数。传递给构造函数的所有 params 转而又传递给 model_fn
-            'feature_columns': my_feature_columns,
+            'feature_columns': my_feature_columns, # 给模型指定特征列，特征列里的各个特征的名字要和数据输入函数返回的数据里的特征名称一致，这样模型才知道怎么用
             # Two hidden layers of 10 nodes each.
             'hidden_units': [10, 10],
             # The model must choose between 3 classes.
